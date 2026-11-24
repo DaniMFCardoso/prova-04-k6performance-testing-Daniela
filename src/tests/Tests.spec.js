@@ -33,6 +33,7 @@ export function handleSummary(data) {
   };
 }
 
+
 export default function () {
   const baseUrl = 'https://fakestoreapi.com/products';
 
@@ -48,12 +49,27 @@ export default function () {
 
   getProductsDuration.add(res.timings.duration);
 
-  RateContentOK.add(res.status === OK && Array.isArray(res.json()));
+  let products = null;
+
+  try {
+    products = res.json();
+  } catch (error) {
+    products = null;
+  }
+
+  RateContentOK.add(
+    res.status === OK &&
+    Array.isArray(products)
+  );
 
   check(res, {
     'GET Products - Status 200': r => r.status === OK,
-    'GET Products - Retorna lista': r => Array.isArray(r.json()),
-    'GET Products - Lista não vazia': r =>
-      Array.isArray(r.json()) && r.json().length > 0
+
+    'GET Products - Retorna lista': () =>
+      Array.isArray(products),
+
+    'GET Products - Lista não vazia': () =>
+      Array.isArray(products) && products.length > 0
   });
 }
+

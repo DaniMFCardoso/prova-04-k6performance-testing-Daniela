@@ -4,30 +4,37 @@ import http from 'k6/http';
 import { check } from 'k6';
 import { Trend, Rate } from 'k6/metrics';
 
-export const getContactsDuration = new Trend('get_contacts', true);
+export const getProductsDuration = new Trend('get_products', true);
 export const RateContentOK = new Rate('content_OK');
 
 export const options = {
-  thresholds: {
-    http_req_failed: ['rate<0.30'],
-    get_contacts: ['p(99)<500'],
-    content_OK: ['rate>0.95']
+  scenarios: {
+    products_load_test: {
+      executor: 'ramping-vus',
+      startVUs: 7,
+      stages: [{ duration: '3m30s', target: 92 }],
+      gracefulRampDown: '0s'
+    }
   },
-  stages: [
-    { duration: '5s', target: 2 },
-    { duration: '5s', target: 6 }
-  ]
+  thresholds: {
+    http_req_failed: ['rate<0.25'],
+    get_products: ['p(90)<6800'],
+    content_OK: ['rate>0.95']
+  }
 };
 
 export function handleSummary(data) {
   return {
     './src/output/index.html': htmlReport(data),
-    stdout: textSummary(data, { indent: ' ', enableColors: true })
+    stdout: textSummary(data, {
+      indent: ' ',
+      enableColors: true
+    })
   };
 }
 
 export default function () {
-  const baseUrl = 'https://test.k6.io/';
+  const baseUrl = 'https://fakestoreapi.com/products';
 
   const params = {
     headers: {
@@ -37,13 +44,16 @@ export default function () {
 
   const OK = 200;
 
-  const res = http.get(`${baseUrl}`, params);
+  const res = http.get(baseUrl, params);
 
-  getContactsDuration.add(res.timings.duration);
+  getProductsDuration.add(res.timings.duration);
 
-  RateContentOK.add(res.status === OK);
+  RateContentOK.add(res.status === OK && Array.isArray(res.json()));
 
   check(res, {
-    'GET Contacts - Status 200': () => res.status === OK
+    'GET Products - Status 200': r => r.status === OK,
+    'GET Products - Retorna lista': r => Array.isArray(r.json()),
+    'GET Products - Lista não vazia': r =>
+      Array.isArray(r.json()) && r.json().length > 0
   });
 }

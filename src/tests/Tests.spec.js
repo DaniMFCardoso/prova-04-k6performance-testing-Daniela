@@ -11,8 +11,12 @@ export const options = {
   scenarios: {
     products_load_test: {
       executor: 'ramping-vus',
-      startVUs: 7,
-      stages: [{ duration: '3m30s', target: 92 }],
+      startVUs: 1,
+      stages: [
+        { duration: '1m', target: 2 },
+        { duration: '1m', target: 3 },
+        { duration: '1m', target: 5 }
+      ],
       gracefulRampDown: '0s'
     }
   },

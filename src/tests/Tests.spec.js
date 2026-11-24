@@ -1,7 +1,8 @@
+
 import { htmlReport } from 'https://raw.githubusercontent.com/benc-uk/k6-reporter/latest/dist/bundle.js';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
 import http from 'k6/http';
-import { check } from 'k6';
+import { check, sleep } from 'k6';
 import { Trend, Rate } from 'k6/metrics';
 
 export const getProductsDuration = new Trend('get_products', true);
@@ -37,9 +38,8 @@ export function handleSummary(data) {
   };
 }
 
-
 export default function () {
-  const baseUrl = 'https://fakestoreapi.com/products';
+  const baseUrl = 'https://jsonplaceholder.typicode.com/posts';
 
   const params = {
     headers: {
@@ -58,27 +58,33 @@ export default function () {
 
   getProductsDuration.add(res.timings.duration);
 
-  let products = null;
+  let posts = null;
 
   try {
-    products = res.json();
+    posts = res.json();
   } catch (error) {
-    products = null;
+    posts = null;
   }
 
-  RateContentOK.add(
+  const validContent =
     res.status === OK &&
-    Array.isArray(products)
-  );
+    Array.isArray(posts) &&
+    posts.length > 0 &&
+    posts.every(post =>
+      typeof post.id === 'number' &&
+      typeof post.title === 'string' &&
+      typeof post.body === 'string'
+    );
+
+  RateContentOK.add(validContent);
 
   check(res, {
-    'GET Products - Status 200': r => r.status === OK,
-
-    'GET Products - Retorna lista': () =>
-      Array.isArray(products),
-
-    'GET Products - Lista não vazia': () =>
-      Array.isArray(products) && products.length > 0
+    'GET Posts - Status 200': r => r.status === OK,
+    'GET Posts - Retorna lista': () => Array.isArray(posts),
+    'GET Posts - Lista não vazia': () =>
+      Array.isArray(posts) && posts.length > 0,
+    'GET Posts - Estrutura válida': () => validContent
   });
-}
 
+  sleep(1);
+}

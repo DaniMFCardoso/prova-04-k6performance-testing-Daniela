@@ -47,6 +47,11 @@ export default function () {
 
   const res = http.get(baseUrl, params);
 
+  if (__VU === 1 && __ITER < 3) {
+    console.log(`STATUS: ${res.status}`);
+    console.log(`BODY: ${(res.body || '').substring(0, 300)}`);
+  }
+
   getProductsDuration.add(res.timings.duration);
 
   let products = null;
